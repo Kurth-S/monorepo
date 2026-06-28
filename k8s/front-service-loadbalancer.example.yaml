@@ -1,0 +1,18 @@
+# Plan B si el Load Balancer Controller no instala por IAM: esto crea un
+# NLB directo, sin pasar por el ingress.yaml. Usar uno u otro, no los dos.
+# kubectl apply -f k8s/front-service-loadbalancer.example.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: front-despacho-lb
+  namespace: innovatech
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+spec:
+  selector:
+    app: front-despacho
+  ports:
+    - port: 80
+      targetPort: 80
+  type: LoadBalancer

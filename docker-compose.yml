@@ -1,0 +1,62 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: innovatech
+      MYSQL_USER: appuser
+      MYSQL_PASSWORD: apppass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  despacho-back:
+    build: ./apps/despacho-back
+    ports:
+      - "8081:8081"
+    environment:
+      DB_ENDPOINT: mysql
+      DB_PORT: 3306
+      DB_NAME: innovatech
+      DB_USERNAME: appuser
+      DB_PASSWORD: apppass
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  ventas-back:
+    build: ./apps/ventas-back
+    ports:
+      - "8080:8080"
+    environment:
+      DB_ENDPOINT: mysql
+      DB_PORT: 3306
+      DB_NAME: innovatech
+      DB_USERNAME: appuser
+      DB_PASSWORD: apppass
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  front-despacho:
+    build:
+      context: ./apps/front-despacho
+      args:
+        VITE_API_DESPACHO_URL: http://localhost:8081
+        VITE_API_VENTAS_URL: http://localhost:8080
+    ports:
+      - "5173:80"
+    depends_on:
+      - despacho-back
+      - ventas-back
+
+volumes:
+  mysql_data:

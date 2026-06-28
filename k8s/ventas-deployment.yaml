@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ventas-back
+  namespace: innovatech
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ventas-back
+  template:
+    metadata:
+      labels:
+        app: ventas-back
+    spec:
+      containers:
+        - name: ventas-back
+          image: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/innovatech-ventas:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: db-credentials
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "384Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /api/v1/ventas
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/v1/ventas
+              port: 8080
+            initialDelaySeconds: 45
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ventas-back
+  namespace: innovatech
+spec:
+  selector:
+    app: ventas-back
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP

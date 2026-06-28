@@ -1,0 +1,114 @@
+name: Build, Push & Deploy to EKS
+
+# Se dispara con cada push a main. Pueden restringirlo a paths si quieren
+# que cada servicio se despliegue de forma independiente (más avanzado).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {} # permite correrlo manualmente desde la pestaña Actions
+
+env:
+  AWS_REGION: us-east-1
+  EKS_CLUSTER_NAME: innovatech-cluster
+  ECR_REPO_DESPACHO: innovatech-despacho
+  ECR_REPO_VENTAS: innovatech-ventas
+  ECR_REPO_FRONT: innovatech-front
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.vars.outputs.image_tag }}
+      registry: ${{ steps.login-ecr.outputs.registry }}
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Definir tag de imagen (usa el SHA del commit)
+        id: vars
+        run: echo "image_tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      # Las credenciales del Learner Lab expiran con la sesión del lab, así
+      # que estos 3 secrets hay que renovarlos a mano cada vez que se reinicia.
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login a Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push - despacho-back
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/despacho-back
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_DESPACHO }}:${{ steps.vars.outputs.image_tag }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_DESPACHO }}:latest
+
+      - name: Build & push - ventas-back
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/ventas-back
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_VENTAS }}:${{ steps.vars.outputs.image_tag }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_VENTAS }}:latest
+
+      - name: Build & push - front-despacho
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/front-despacho
+          push: true
+          build-args: |
+            VITE_API_DESPACHO_URL=${{ secrets.VITE_API_DESPACHO_URL }}
+            VITE_API_VENTAS_URL=${{ secrets.VITE_API_VENTAS_URL }}
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_FRONT }}:${{ steps.vars.outputs.image_tag }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO_FRONT }}:latest
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Actualizar kubeconfig
+        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+
+      - name: Aplicar manifiestos base (namespace, services, hpa, ingress)
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/despacho-deployment.yaml
+          kubectl apply -f k8s/ventas-deployment.yaml
+          kubectl apply -f k8s/front-deployment.yaml
+          kubectl apply -f k8s/hpa.yaml
+          kubectl apply -f k8s/ingress.yaml
+
+      - name: Actualizar imagen de cada deployment al tag recién construido
+        run: |
+          REGISTRY=${{ needs.build-and-push.outputs.registry }}
+          TAG=${{ needs.build-and-push.outputs.image_tag }}
+          kubectl set image deployment/despacho-back despacho-back=$REGISTRY/${{ env.ECR_REPO_DESPACHO }}:$TAG -n innovatech
+          kubectl set image deployment/ventas-back ventas-back=$REGISTRY/${{ env.ECR_REPO_VENTAS }}:$TAG -n innovatech
+          kubectl set image deployment/front-despacho front-despacho=$REGISTRY/${{ env.ECR_REPO_FRONT }}:$TAG -n innovatech
+
+      - name: Esperar rollout y verificar salud
+        run: |
+          kubectl rollout status deployment/despacho-back -n innovatech --timeout=180s
+          kubectl rollout status deployment/ventas-back -n innovatech --timeout=180s
+          kubectl rollout status deployment/front-despacho -n innovatech --timeout=180s

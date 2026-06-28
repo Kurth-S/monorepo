@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front-despacho
+  namespace: innovatech
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: front-despacho
+  template:
+    metadata:
+      labels:
+        app: front-despacho
+    spec:
+      containers:
+        - name: front-despacho
+          image: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/innovatech-front:latest
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: front-despacho
+  namespace: innovatech
+spec:
+  selector:
+    app: front-despacho
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP
