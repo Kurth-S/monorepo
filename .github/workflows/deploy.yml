@@ -97,7 +97,7 @@ jobs:
           kubectl apply -f k8s/ventas-deployment.yaml
           kubectl apply -f k8s/front-deployment.yaml
           kubectl apply -f k8s/hpa.yaml
-          kubectl apply -f k8s/ingress.yaml
+          
 
       - name: Actualizar imagen de cada deployment al tag recién construido
         run: |
