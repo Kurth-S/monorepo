@@ -57,7 +57,7 @@ aws ecr create-repository --repository-name innovatech-front    --region us-east
 ```
 
 ### Paso 3 — Crear el clúster EKS ⚠️ (probar esto primero, es el mayor riesgo)
-1. Edita `infra/eksctl-cluster.yaml` y reemplaza `<ACCOUNT_ID>` por tu Account ID (panel "AWS Details" del Learner Lab).
+1. Edita `infra/eksctl-cluster.yaml` y reemplaza `565757789330` por tu Account ID (panel "AWS Details" del Learner Lab).
 2. Crea el clúster:
    ```bash
    eksctl create cluster -f infra/eksctl-cluster.yaml

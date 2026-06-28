@@ -16,7 +16,7 @@ spec:
       containers:
         - name: despacho-back
           # La CI/CD reemplaza este tag en cada deploy (ver workflow de GitHub Actions)
-          image: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/innovatech-despacho:latest
+          image: 565757789330.dkr.ecr.us-east-1.amazonaws.com/innovatech-despacho:latest
           ports:
             - containerPort: 8081
           envFrom:

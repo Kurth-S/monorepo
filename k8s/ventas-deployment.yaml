@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: ventas-back
-          image: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/innovatech-ventas:latest
+          image: 565757789330.dkr.ecr.us-east-1.amazonaws.com/innovatech-ventas:latest
           ports:
             - containerPort: 8080
           envFrom:

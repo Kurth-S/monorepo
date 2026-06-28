@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: front-despacho
-          image: <ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/innovatech-front:latest
+          image: 565757789330.dkr.ecr.us-east-1.amazonaws.com/innovatech-front:latest
           ports:
             - containerPort: 80
           resources:

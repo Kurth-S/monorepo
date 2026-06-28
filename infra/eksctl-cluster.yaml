@@ -1,5 +1,5 @@
 # Usamos LabRole en vez de dejar que eksctl cree roles nuevos, porque el
-# Learner Lab no da permiso para crear IAM roles. Reemplazar <ACCOUNT_ID>
+# Learner Lab no da permiso para crear IAM roles. Reemplazar 565757789330
 # en las dos líneas de abajo. Key pair "vockey" es la que trae el lab por
 # default; si en su lab se llama distinto, cambiarla.
 #
@@ -12,10 +12,10 @@ kind: ClusterConfig
 metadata:
   name: innovatech-cluster
   region: us-east-1
-  version: "1.29"
+  version: "1.31" 
 
 iam:
-  serviceRoleARN: arn:aws:iam::<ACCOUNT_ID>:role/LabRole
+  serviceRoleARN: arn:aws:iam::565757789330:role/LabRole
 
 managedNodeGroups:
   - name: innovatech-nodes
@@ -28,7 +28,7 @@ managedNodeGroups:
       allow: true
       publicKeyName: vockey
     iam:
-      instanceRoleARN: arn:aws:iam::<ACCOUNT_ID>:role/LabRole
+      instanceRoleARN: arn:aws:iam::565757789330:role/LabRole
     labels:
       role: innovatech-workload
 
